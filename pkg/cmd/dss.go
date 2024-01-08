@@ -70,7 +70,7 @@ func (o *DSsOptions) Run(ctx context.Context, noHeader bool) error {
 		}
 	}
 
-	headers := []string{"NAMESPACE", "NAME", "DESIRED", "Current", "READY", "UP-TO-DATE", "AVAILABLE", "AGE"}
+	headers := []string{"NAMESPACE", "NAME", "DESIRED", "CURRENT", "READY", "UP-TO-DATE", "AVAILABLE", "AGE"}
 
 	buf := bytes.NewBuffer(nil)
 	writer.WriteResults(buf, headers, matrix, noHeader)
