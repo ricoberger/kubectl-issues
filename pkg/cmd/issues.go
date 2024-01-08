@@ -29,6 +29,7 @@ func NewIssuesCommand() *cobra.Command {
 
 	f := cmdutil.NewFactory(matchVersionFlags)
 
+	cmd.AddCommand(newDeploysCommand(f, o))
 	cmd.AddCommand(newDSsCommand(f, o))
 	cmd.AddCommand(newJobsCommand(f, o))
 	cmd.AddCommand(newNodesCommand(f, o))
