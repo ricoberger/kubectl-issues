@@ -28,6 +28,7 @@ func newJobsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 
 	cmd := &cobra.Command{
 		Use:          "jobs",
+		Aliases:      []string{"job"},
 		Short:        "List issues with Jobs",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {

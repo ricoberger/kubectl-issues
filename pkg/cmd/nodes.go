@@ -30,6 +30,7 @@ func newNodesCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comm
 
 	cmd := &cobra.Command{
 		Use:          "nodes",
+		Aliases:      []string{"node", "no"},
 		Short:        "List issues with Nodes",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {

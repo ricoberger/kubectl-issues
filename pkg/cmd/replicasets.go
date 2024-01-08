@@ -28,6 +28,7 @@ func newReplicaSetsCommand(factory cmdutil.Factory, options IssuesOptions) *cobr
 
 	cmd := &cobra.Command{
 		Use:          "replicasets",
+		Aliases:      []string{"replicaset", "rs"},
 		Short:        "List issues with ReplicaSets",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {

@@ -28,6 +28,7 @@ func newStatefulSetsCommand(factory cmdutil.Factory, options IssuesOptions) *cob
 
 	cmd := &cobra.Command{
 		Use:          "statefulsets",
+		Aliases:      []string{"statefulset", "sts"},
 		Short:        "List issues with StatefulSets",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {

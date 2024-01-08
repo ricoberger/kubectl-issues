@@ -15,21 +15,22 @@ import (
 	storageutil "k8s.io/kubectl/pkg/util/storage"
 )
 
-type PVsOptions struct {
+type PersistentVolumesOptions struct {
 	IssuesOptions
 }
 
-func newPVsOptions(options IssuesOptions) *PVsOptions {
-	return &PVsOptions{
+func newPersistentVolumesOptions(options IssuesOptions) *PersistentVolumesOptions {
+	return &PersistentVolumesOptions{
 		IssuesOptions: options,
 	}
 }
 
-func newPVsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
-	o := newPVsOptions(options)
+func newPersistentVolumesCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
+	o := newPersistentVolumesOptions(options)
 
 	cmd := &cobra.Command{
-		Use:          "pvs",
+		Use:          "persistentvolumes",
+		Aliases:      []string{"persistentvolume", "pv"},
 		Short:        "List issues with PersistentVolumes",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -52,7 +53,7 @@ func newPVsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comman
 	return cmd
 }
 
-func (o *PVsOptions) Run(ctx context.Context, noHeader bool) error {
+func (o *PersistentVolumesOptions) Run(ctx context.Context, noHeader bool) error {
 	client, err := o.GetClient()
 	if err != nil {
 		return err
