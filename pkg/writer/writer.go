@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 )
 
-func WriteResults(out io.Writer, headers []string, matrix [][]string, namespace string, noHeader bool) {
+func WriteResults(out io.Writer, headers []string, matrix [][]string, noHeader bool) {
 	w := tabwriter.NewWriter(out, 0, 0, 3, ' ', 0)
 	defer w.Flush()
 
