@@ -1,6 +1,6 @@
 # kubectl issues
 
-`kubectl issues` is a kubectl plugin to find issues with your Kubernetes objects. The plugin is inspired by the [`kubectl janitor`](https://github.com/dastergon/kubectl-janitor) plugin.
+`kubectl issues` is a kubectl plugin to find issues with your Kubernetes objects.
 
 ## Install
 
@@ -39,3 +39,7 @@ To publish a new version, a new tag must be created and pushed:
 git tag -a v0.1.0 -m 'Release v0.1.0'
 git push origin --tags
 ```
+
+## Acknowledgments
+
+The plugin is inspired by the [`kubectl janitor`](https://github.com/dastergon/kubectl-janitor) plugin.
