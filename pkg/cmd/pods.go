@@ -29,6 +29,7 @@ func newPodsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 
 	cmd := &cobra.Command{
 		Use:          "pods",
+		Aliases:      []string{"pod", "po"},
 		Short:        "List issues with Pods",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {

@@ -29,13 +29,13 @@ func NewIssuesCommand() *cobra.Command {
 
 	f := cmdutil.NewFactory(matchVersionFlags)
 
-	cmd.AddCommand(newDeploysCommand(f, o))
-	cmd.AddCommand(newDSsCommand(f, o))
+	cmd.AddCommand(newDaemonSetsCommand(f, o))
+	cmd.AddCommand(newDeploymentsCommand(f, o))
 	cmd.AddCommand(newJobsCommand(f, o))
 	cmd.AddCommand(newNodesCommand(f, o))
+	cmd.AddCommand(newPersistentVolumeClaimsCommand(f, o))
+	cmd.AddCommand(newPersistentVolumesCommand(f, o))
 	cmd.AddCommand(newPodsCommand(f, o))
-	cmd.AddCommand(newPVCsCommand(f, o))
-	cmd.AddCommand(newPVsCommand(f, o))
 	cmd.AddCommand(newReplicaSetsCommand(f, o))
 	cmd.AddCommand(newStatefulSetsCommand(f, o))
 

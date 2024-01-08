@@ -13,21 +13,22 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
-type DeploysOptions struct {
+type DeploymentsOptions struct {
 	IssuesOptions
 }
 
-func newDeploysOptions(options IssuesOptions) *DeploysOptions {
-	return &DeploysOptions{
+func newDeploymentsOptions(options IssuesOptions) *DeploymentsOptions {
+	return &DeploymentsOptions{
 		IssuesOptions: options,
 	}
 }
 
-func newDeploysCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
-	o := newDeploysOptions(options)
+func newDeploymentsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
+	o := newDeploymentsOptions(options)
 
 	cmd := &cobra.Command{
-		Use:          "deploys",
+		Use:          "deployments",
+		Aliases:      []string{"deployment", "deploy"},
 		Short:        "List issues with Deployments",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -50,20 +51,20 @@ func newDeploysCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Co
 	return cmd
 }
 
-func (o *DeploysOptions) Run(ctx context.Context, noHeader bool) error {
+func (o *DeploymentsOptions) Run(ctx context.Context, noHeader bool) error {
 	client, err := o.GetClient()
 	if err != nil {
 		return err
 	}
 
-	deploys, err := client.AppsV1().Deployments(o.namespace).List(ctx, metav1.ListOptions{})
+	deployments, err := client.AppsV1().Deployments(o.namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	var matrix [][]string
 
-	for _, deploy := range deploys.Items {
+	for _, deploy := range deployments.Items {
 		if deploy.Status.Replicas != deploy.Status.ReadyReplicas || deploy.Status.Replicas != deploy.Status.UpdatedReplicas || deploy.Status.Replicas != deploy.Status.AvailableReplicas {
 			row := []string{deploy.Namespace, deploy.Name, fmt.Sprintf("%d/%d", deploy.Status.ReadyReplicas, deploy.Status.Replicas), fmt.Sprintf("%d", deploy.Status.UpdatedReplicas), fmt.Sprintf("%d", deploy.Status.AvailableReplicas), utils.GetAge(deploy.CreationTimestamp)}
 			matrix = append(matrix, row)

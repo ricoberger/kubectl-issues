@@ -13,21 +13,22 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
-type DSsOptions struct {
+type DaemonSetsOptions struct {
 	IssuesOptions
 }
 
-func newDSsOptions(options IssuesOptions) *DSsOptions {
-	return &DSsOptions{
+func newDaemonSetsOptions(options IssuesOptions) *DaemonSetsOptions {
+	return &DaemonSetsOptions{
 		IssuesOptions: options,
 	}
 }
 
-func newDSsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
-	o := newDSsOptions(options)
+func newDaemonSetsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
+	o := newDaemonSetsOptions(options)
 
 	cmd := &cobra.Command{
-		Use:          "dss",
+		Use:          "daemonsets",
+		Aliases:      []string{"daemonset", "ds"},
 		Short:        "List issues with DaemonSets",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -50,20 +51,20 @@ func newDSsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comman
 	return cmd
 }
 
-func (o *DSsOptions) Run(ctx context.Context, noHeader bool) error {
+func (o *DaemonSetsOptions) Run(ctx context.Context, noHeader bool) error {
 	client, err := o.GetClient()
 	if err != nil {
 		return err
 	}
 
-	dss, err := client.AppsV1().DaemonSets(o.namespace).List(ctx, metav1.ListOptions{})
+	daemonSets, err := client.AppsV1().DaemonSets(o.namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	var matrix [][]string
 
-	for _, ds := range dss.Items {
+	for _, ds := range daemonSets.Items {
 		if ds.Status.DesiredNumberScheduled != ds.Status.CurrentNumberScheduled || ds.Status.DesiredNumberScheduled != ds.Status.NumberReady || ds.Status.DesiredNumberScheduled != ds.Status.UpdatedNumberScheduled || ds.Status.DesiredNumberScheduled != ds.Status.NumberAvailable || ds.Status.NumberMisscheduled > 0 {
 			row := []string{ds.Namespace, ds.Name, fmt.Sprintf("%d", ds.Status.DesiredNumberScheduled), fmt.Sprintf("%d", ds.Status.CurrentNumberScheduled), fmt.Sprintf("%d", ds.Status.NumberReady), fmt.Sprintf("%d", ds.Status.UpdatedNumberScheduled), fmt.Sprintf("%d", ds.Status.NumberAvailable), utils.GetAge(ds.CreationTimestamp)}
 			matrix = append(matrix, row)
