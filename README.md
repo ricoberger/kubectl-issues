@@ -36,8 +36,9 @@ go build -o ./bin/kubectl-issues .
 To publish a new version, a new tag must be created and pushed:
 
 ```sh
-git tag -a v0.1.0 -m 'Release v0.1.0'
-git push origin --tags
+make release-patch
+make release-minor
+make release-major
 ```
 
 ## Acknowledgments
