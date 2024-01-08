@@ -36,6 +36,7 @@ func NewIssuesCommand() *cobra.Command {
 	cmd.AddCommand(newPodsCommand(f, o))
 	cmd.AddCommand(newPVCsCommand(f, o))
 	cmd.AddCommand(newPVsCommand(f, o))
+	cmd.AddCommand(newReplicaSetsCommand(f, o))
 	cmd.AddCommand(newStatefulSetsCommand(f, o))
 
 	return cmd
