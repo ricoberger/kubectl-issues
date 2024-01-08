@@ -94,7 +94,7 @@ func (o *PodsOptions) Run(ctx context.Context, includeRestarts, noHeader bool) e
 	headers := []string{"NAMESPACE", "NAME", "READY", "STATUS", "RESTARTS", "AGE"}
 
 	buf := bytes.NewBuffer(nil)
-	writer.WriteResults(buf, headers, matrix, o.namespace, noHeader)
+	writer.WriteResults(buf, headers, matrix, noHeader)
 	fmt.Printf("%s", buf.String())
 
 	return nil
