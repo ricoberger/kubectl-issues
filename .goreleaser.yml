@@ -1,0 +1,39 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/
+    binary: kubectl-issues
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - freebsd
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - "386"
+    goarm:
+      - "6"
+      - "7"
+    ldflags:
+      - -s -w
+      - -X github.com/ricoberger/kubectl-issues/cmd.Version={{.Version}}
+
+checksum:
+  name_template: 'checksums.txt'
+
+archives:
+  - builds:
+      - kubectl-issues
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: false
+    files:
+      - LICENSE
+
+changelog:
+  sort: asc
