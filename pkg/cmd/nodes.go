@@ -68,7 +68,7 @@ func (o *NodesOptions) Run(ctx context.Context, noHeader bool) error {
 
 	for _, node := range nodes.Items {
 		for _, condition := range node.Status.Conditions {
-			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionFalse {
+			if (condition.Type == corev1.NodeReady && condition.Status != corev1.ConditionTrue) || (condition.Type != corev1.NodeReady && condition.Status == corev1.ConditionTrue) {
 				row := []string{node.Name, getNodeStatus(node.Status.Conditions), node.Labels["kubernetes.io/role"], utils.GetAge(node.CreationTimestamp), node.Status.NodeInfo.KubeletVersion}
 				matrix = append(matrix, row)
 			}
@@ -92,5 +92,10 @@ func getNodeStatus(conditions []corev1.NodeCondition) string {
 			statuses = append(statuses, string(condition.Type))
 		}
 	}
+
+	if len(statuses) == 0 {
+		return "NotReady"
+	}
+
 	return strings.Join(statuses, ", ")
 }
