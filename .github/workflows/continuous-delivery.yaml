@@ -25,7 +25,7 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - uses: goreleaser/goreleaser-action@v5
+      - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
