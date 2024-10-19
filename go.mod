@@ -1,8 +1,6 @@
 module github.com/ricoberger/kubectl-issues
 
-go 1.22.0
-
-toolchain go1.22.2
+go 1.23.0
 
 require (
 	github.com/spf13/cobra v1.8.1
