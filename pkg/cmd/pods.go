@@ -70,7 +70,7 @@ func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
 		var shouldReady int64
 		var isReady int64
 		var restarts int32
-		var hasRecentRestarts bool
+		var restartAge string
 
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			shouldReady++
@@ -82,7 +82,7 @@ func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
 				restarts = restarts + containerStatus.RestartCount
 
 				if containerStatus.LastTerminationState.Terminated != nil && containerStatus.LastTerminationState.Terminated.ExitCode != 0 && containerStatus.LastTerminationState.Terminated.FinishedAt.After(time.Now().Add(-24*time.Hour)) {
-					hasRecentRestarts = true
+					restartAge = utils.GetAge(containerStatus.LastTerminationState.Terminated.FinishedAt)
 				}
 			}
 		}
@@ -90,8 +90,13 @@ func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
 		status := getPodStatus(pod)
 
 		if !(pod.Status.Phase == corev1.PodSucceeded && status == "Completed") {
-			if !isPodHealthy(pod) || shouldReady != isReady || hasRecentRestarts {
-				row := []string{pod.Namespace, pod.Name, fmt.Sprintf("%d/%d", isReady, shouldReady), status, fmt.Sprintf("%d", restarts), utils.GetAge(pod.CreationTimestamp)}
+			if !isPodHealthy(pod) || shouldReady != isReady || restartAge != "" {
+				restartsCell := fmt.Sprintf("%d", restarts)
+				if restartAge != "" {
+					restartsCell = fmt.Sprintf("%d (%s ago)", restarts, restartAge)
+				}
+
+				row := []string{pod.Namespace, pod.Name, fmt.Sprintf("%d/%d", isReady, shouldReady), status, restartsCell, utils.GetAge(pod.CreationTimestamp)}
 				matrix = append(matrix, row)
 			}
 		}
