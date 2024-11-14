@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ricoberger/kubectl-issues/pkg/cmd/utils"
 	"github.com/ricoberger/kubectl-issues/pkg/writer"
@@ -39,8 +40,7 @@ func newPodsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 
 			ctx := context.Background()
 			noHeader := c.Flag("no-headers").Changed
-			includeRestarts := c.Flag("restarts").Changed
-			if err := o.Run(ctx, includeRestarts, noHeader); err != nil {
+			if err := o.Run(ctx, noHeader); err != nil {
 				fmt.Fprintln(options.Streams.ErrOut, err.Error())
 				return nil
 			}
@@ -48,14 +48,12 @@ func newPodsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 		},
 	}
 
-	cmd.PersistentFlags().Bool("restarts", false, "Include Pods with restarts")
-
 	o.ResourceBuilderFlags.AddFlags(cmd.Flags())
 
 	return cmd
 }
 
-func (o *PodsOptions) Run(ctx context.Context, includeRestarts, noHeader bool) error {
+func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
 	client, err := o.GetClient()
 	if err != nil {
 		return err
@@ -72,6 +70,7 @@ func (o *PodsOptions) Run(ctx context.Context, includeRestarts, noHeader bool) e
 		var shouldReady int64
 		var isReady int64
 		var restarts int32
+		var hasRecentRestarts bool
 
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			shouldReady++
@@ -79,13 +78,19 @@ func (o *PodsOptions) Run(ctx context.Context, includeRestarts, noHeader bool) e
 				isReady++
 			}
 
-			restarts = restarts + containerStatus.RestartCount
+			if containerStatus.RestartCount > 0 {
+				restarts = restarts + containerStatus.RestartCount
+
+				if containerStatus.LastTerminationState.Terminated != nil && containerStatus.LastTerminationState.Terminated.ExitCode != 0 && containerStatus.LastTerminationState.Terminated.FinishedAt.After(time.Now().Add(-24*time.Hour)) {
+					hasRecentRestarts = true
+				}
+			}
 		}
 
 		status := getPodStatus(pod)
 
 		if !(pod.Status.Phase == corev1.PodSucceeded && status == "Completed") {
-			if !isPodHealthy(pod) || shouldReady != isReady || (includeRestarts && restarts > 0) {
+			if !isPodHealthy(pod) || shouldReady != isReady || hasRecentRestarts {
 				row := []string{pod.Namespace, pod.Name, fmt.Sprintf("%d/%d", isReady, shouldReady), status, fmt.Sprintf("%d", restarts), utils.GetAge(pod.CreationTimestamp)}
 				matrix = append(matrix, row)
 			}
