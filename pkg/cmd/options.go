@@ -43,7 +43,6 @@ func (o *IssuesOptions) GetClient() (*kubernetes.Clientset, error) {
 		return nil, err
 	}
 	return clientSet, nil
-
 }
 
 func (o *IssuesOptions) Complete(factory cmdutil.Factory, cmd *cobra.Command) error {

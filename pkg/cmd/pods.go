@@ -89,7 +89,7 @@ func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
 
 		status := getPodStatus(pod)
 
-		if !(pod.Status.Phase == corev1.PodSucceeded && status == "Completed") {
+		if pod.Status.Phase != corev1.PodSucceeded || status != "Completed" {
 			if !isPodHealthy(pod) || shouldReady != isReady || restartAge != "" {
 				restartsCell := fmt.Sprintf("%d", restarts)
 				if restartAge != "" {
@@ -128,7 +128,6 @@ func getPodStatus(pod corev1.Pod) string {
 				if status.State.Terminated != nil {
 					return string(status.State.Terminated.Reason)
 				}
-
 			}
 		}
 	case corev1.PodRunning:
