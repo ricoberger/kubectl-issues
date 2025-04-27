@@ -67,7 +67,7 @@ func (o *NodesOptions) Run(ctx context.Context, noHeader bool) error {
 	var matrix [][]string
 
 	for _, node := range nodes.Items {
-		if !isNodeReady(node.Status.Conditions) || node.Spec.Unschedulable == true {
+		if !isNodeReady(node.Status.Conditions) || node.Spec.Unschedulable {
 			row := []string{node.Name, getNodeStatus(node), node.Labels["kubernetes.io/role"], utils.GetAge(node.CreationTimestamp), node.Status.NodeInfo.KubeletVersion}
 			matrix = append(matrix, row)
 		}
@@ -102,14 +102,14 @@ func getNodeStatus(node corev1.Node) string {
 	}
 
 	if len(statuses) == 0 {
-		if node.Spec.Unschedulable == true {
+		if node.Spec.Unschedulable {
 			return "NotReady,SchedulingDisabled"
 		}
 
 		return "NotReady"
 	}
 
-	if node.Spec.Unschedulable == true {
+	if node.Spec.Unschedulable {
 		statuses = append(statuses, "SchedulingDisabled")
 	}
 
