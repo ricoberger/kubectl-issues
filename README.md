@@ -1,12 +1,14 @@
 # kubectl issues
 
-`kubectl issues` is a kubectl plugin to find issues with your Kubernetes objects.
+`kubectl issues` is a kubectl plugin to find issues with your Kubernetes
+objects.
 
 ## Install
 
 ### Releases
 
-Check the [releases](https://github.com/ricoberger/kubectl-issues/releases) page for the full list of pre-built binaries.
+Check the [releases](https://github.com/ricoberger/kubectl-issues/releases) page
+for the full list of pre-built binaries.
 
 1. Download the release for your os/arch
 2. Unzip to archive to get the `kubectl-issues` binary
@@ -33,14 +35,8 @@ go build -o ./bin/kubectl-issues .
 ./bin/kubectl-issues
 ```
 
-To publish a new version, a new tag must be created and pushed:
-
-```sh
-make release-patch
-make release-minor
-make release-major
-```
-
 ## Acknowledgments
 
-The plugin is inspired by the [`kubectl janitor`](https://github.com/dastergon/kubectl-janitor) plugin.
+The plugin is inspired by the
+[`kubectl janitor`](https://github.com/dastergon/kubectl-janitor) plugin.
+
