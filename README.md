@@ -39,4 +39,3 @@ go build -o ./bin/kubectl-issues .
 
 The plugin is inspired by the
 [`kubectl janitor`](https://github.com/dastergon/kubectl-janitor) plugin.
-

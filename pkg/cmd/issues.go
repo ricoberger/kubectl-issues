@@ -7,6 +7,9 @@ import (
 
 var cmdExample = `  # List issues with Pods
   kubectl issues pods
+
+  # Show all unhealthy Pods across multiple contexts in a TUI
+  kubectl issues tui --context staging --context production
 `
 
 func NewIssuesCommand() *cobra.Command {
@@ -38,6 +41,7 @@ func NewIssuesCommand() *cobra.Command {
 	cmd.AddCommand(newPodsCommand(f, o))
 	cmd.AddCommand(newReplicaSetsCommand(f, o))
 	cmd.AddCommand(newStatefulSetsCommand(f, o))
+	cmd.AddCommand(newTUICommand(f, o))
 
 	return cmd
 }
