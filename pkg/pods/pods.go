@@ -25,10 +25,29 @@ type Pod struct {
 	Age       string
 }
 
+// Options tunes which Pods are considered unhealthy by ListUnhealthy.
+type Options struct {
+	// RestartThreshold is the minimum lifetime restart count a container must
+	// have before a Ready Pod is reported for a recent crash. A value of 0
+	// disables reporting Ready Pods entirely, 1 reports any recent crash.
+	RestartThreshold int
+	// RestartWindow is how recent the last crash of a container must be for a
+	// Ready Pod to be reported.
+	RestartWindow time.Duration
+}
+
+// DefaultOptions returns the default Options used to detect unhealthy Pods.
+func DefaultOptions() Options {
+	return Options{
+		RestartThreshold: 3,
+		RestartWindow:    24 * time.Hour,
+	}
+}
+
 // ListUnhealthy returns all unhealthy Pods in the given namespace. If the
 // namespace is empty, Pods from all namespaces are returned. The contextName is
 // only used to populate the Context field of the returned Pods.
-func ListUnhealthy(ctx context.Context, client kubernetes.Interface, namespace, contextName string) ([]Pod, error) {
+func ListUnhealthy(ctx context.Context, client kubernetes.Interface, namespace, contextName string, opts Options) ([]Pod, error) {
 	list, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -46,9 +65,9 @@ func ListUnhealthy(ctx context.Context, client kubernetes.Interface, namespace, 
 
 		// Only surface Pods that have an actual issue: not Ready (which folds
 		// in container readiness, sidecars and readiness gates), or a container
-		// that crashed recently (so flapping Pods that are momentarily Ready are
-		// still reported).
-		if hasPodReadyCondition(pod.Status.Conditions) && !hasRecentCrash(pod) {
+		// that restarted repeatedly and crashed recently (so flapping Pods that
+		// are momentarily Ready are still reported).
+		if hasPodReadyCondition(pod.Status.Conditions) && !hasRecentCrash(pod, opts) {
 			continue
 		}
 
@@ -67,14 +86,20 @@ func ListUnhealthy(ctx context.Context, client kubernetes.Interface, namespace, 
 }
 
 // hasRecentCrash reports whether any container of the Pod (init or regular)
-// terminated with a non-zero exit code within the last 24 hours.
-func hasRecentCrash(pod corev1.Pod) bool {
-	cutoff := time.Now().Add(-24 * time.Hour)
+// restarted at least opts.RestartThreshold times in total and terminated with
+// a non-zero exit code within opts.RestartWindow. A threshold of 0 disables
+// the check, so a single one-off restart does not flag an otherwise Ready Pod.
+func hasRecentCrash(pod corev1.Pod, opts Options) bool {
+	if opts.RestartThreshold <= 0 {
+		return false
+	}
+
+	cutoff := time.Now().Add(-opts.RestartWindow)
 
 	check := func(statuses []corev1.ContainerStatus) bool {
 		for _, cs := range statuses {
 			term := cs.LastTerminationState.Terminated
-			if cs.RestartCount > 0 && term != nil && term.ExitCode != 0 && term.FinishedAt.After(cutoff) {
+			if int(cs.RestartCount) >= opts.RestartThreshold && term != nil && term.ExitCode != 0 && term.FinishedAt.After(cutoff) {
 				return true
 			}
 		}

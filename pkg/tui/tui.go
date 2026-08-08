@@ -3,6 +3,8 @@ package tui
 import (
 	"fmt"
 
+	"github.com/ricoberger/kubectl-issues/pkg/pods"
+
 	tea "charm.land/bubbletea/v2"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
@@ -17,8 +19,9 @@ type ContextClient struct {
 }
 
 // Start builds a Kubernetes client for every given context and starts the TUI.
-// If no contexts are given, the current context of the kubeconfig is used.
-func Start(contexts []string, configFlags *genericclioptions.ConfigFlags) error {
+// If no contexts are given, the current context of the kubeconfig is used. The
+// podsOptions tune which Pods are considered unhealthy.
+func Start(contexts []string, configFlags *genericclioptions.ConfigFlags, podsOptions pods.Options) error {
 	kubeconfig := ""
 	if configFlags != nil && configFlags.KubeConfig != nil {
 		kubeconfig = *configFlags.KubeConfig
@@ -38,7 +41,7 @@ func Start(contexts []string, configFlags *genericclioptions.ConfigFlags) error 
 		clients = append(clients, ContextClient{Name: resolvedName, Client: client})
 	}
 
-	model := NewModel(clients)
+	model := NewModel(clients, podsOptions)
 
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {

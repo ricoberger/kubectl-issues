@@ -66,7 +66,7 @@ type podsMsg struct {
 }
 
 // fetchCmd fetches the unhealthy Pods from all contexts in parallel.
-func fetchCmd(clients []ContextClient) tea.Cmd {
+func fetchCmd(clients []ContextClient, podsOptions pods.Options) tea.Cmd {
 	return func() tea.Msg {
 		var (
 			wg       sync.WaitGroup
@@ -84,7 +84,7 @@ func fetchCmd(clients []ContextClient) tea.Cmd {
 				ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 				defer cancel()
 
-				result, err := pods.ListUnhealthy(ctx, client.Client, "", client.Name)
+				result, err := pods.ListUnhealthy(ctx, client.Client, "", client.Name, podsOptions)
 
 				mu.Lock()
 				defer mu.Unlock()
@@ -120,17 +120,19 @@ type Model struct {
 	ScreenWidth  int
 	ScreenHeight int
 
-	Clients []ContextClient
-	Table   table.Model
+	Clients     []ContextClient
+	PodsOptions pods.Options
+	Table       table.Model
 
 	count       int
 	lastErr     error
 	lastUpdated time.Time
 }
 
-func NewModel(clients []ContextClient) tea.Model {
+func NewModel(clients []ContextClient, podsOptions pods.Options) tea.Model {
 	return &Model{
-		Clients: clients,
+		Clients:     clients,
+		PodsOptions: podsOptions,
 		Table: table.New([]table.Column{
 			table.NewFlexColumn(columnKeyContext, "Context", 1).WithStyle(lipgloss.NewStyle().Align(lipgloss.Left)),
 			table.NewFlexColumn(columnKeyNamespace, "Namespace", 1).WithStyle(lipgloss.NewStyle().Align(lipgloss.Left)),
@@ -150,7 +152,7 @@ func NewModel(clients []ContextClient) tea.Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(fetchCmd(m.Clients), tickEvery())
+	return tea.Batch(fetchCmd(m.Clients, m.PodsOptions), tickEvery())
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -168,7 +170,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			cmds = append(cmds, tea.Quit)
 		case "r":
-			cmds = append(cmds, fetchCmd(m.Clients))
+			cmds = append(cmds, fetchCmd(m.Clients, m.PodsOptions))
 		}
 	case tea.WindowSizeMsg:
 		m.ScreenWidth = msg.Width
@@ -183,7 +185,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lastUpdated = time.Now()
 		m.Table = m.Table.WithRows(generateRows(msg.items))
 	case TickMsg:
-		cmds = append(cmds, fetchCmd(m.Clients), tickEvery())
+		cmds = append(cmds, fetchCmd(m.Clients, m.PodsOptions), tickEvery())
 	}
 
 	m.Table = m.Table.WithStaticFooter(m.footer())
