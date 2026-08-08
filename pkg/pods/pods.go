@@ -99,7 +99,7 @@ func hasRecentCrash(pod corev1.Pod, opts Options) bool {
 	check := func(statuses []corev1.ContainerStatus) bool {
 		for _, cs := range statuses {
 			term := cs.LastTerminationState.Terminated
-			if cs.RestartCount >= int32(opts.RestartThreshold) && term != nil && term.ExitCode != 0 && term.FinishedAt.After(cutoff) {
+			if int(cs.RestartCount) >= opts.RestartThreshold && term != nil && term.ExitCode != 0 && term.FinishedAt.After(cutoff) {
 				return true
 			}
 		}
