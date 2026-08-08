@@ -8,6 +8,9 @@ import (
 var cmdExample = `  # List issues with Pods
   kubectl issues pods
 
+  # List issues with Pods as JSON
+  kubectl issues pods --output json
+
   # List issues with Pods across multiple contexts
   kubectl issues pods --all-namespaces --context staging --context production
 
