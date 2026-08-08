@@ -20,6 +20,7 @@ type IssuesOptions struct {
 	ResourceBuilderFlags *genericclioptions.ResourceBuilderFlags
 	contexts             []string
 	allNamespaces        bool
+	output               string
 }
 
 func NewIssuesOptions() IssuesOptions {
@@ -51,6 +52,10 @@ func (o *IssuesOptions) Complete(cmd *cobra.Command) error {
 	}
 	o.contexts = contexts
 
+	if o.output != "" && o.output != "json" {
+		return fmt.Errorf("invalid output format %q, allowed formats are: json", o.output)
+	}
+
 	return nil
 }
 
@@ -80,10 +85,11 @@ func (o *IssuesOptions) GetClients() ([]client.ContextClient, error) {
 type rowsFunc func(ctx context.Context, contextClient client.ContextClient) ([][]string, error)
 
 // RunAcrossContexts collects the table rows from all requested contexts in
-// parallel and prints them as a single table with a leading CONTEXT column.
-// The rows are grouped in the order the contexts were specified. An error in
-// one context is printed to stderr and does not hide the results of the other
-// contexts.
+// RunAcrossContexts collects the table rows from all requested contexts in
+// parallel and prints them as a single table with a leading CONTEXT column,
+// or as JSON if the output format is set to "json". The rows are grouped in
+// the order the contexts were specified. An error in one context is printed
+// to stderr and does not hide the results of the other contexts.
 func (o *IssuesOptions) RunAcrossContexts(ctx context.Context, noHeader bool, headers []string, rows rowsFunc) error {
 	clients, err := o.GetClients()
 	if err != nil {
@@ -126,8 +132,14 @@ func (o *IssuesOptions) RunAcrossContexts(ctx context.Context, noHeader bool, he
 		matrix = append(matrix, r.rows...)
 	}
 
+	allHeaders := append([]string{"CONTEXT"}, headers...)
+
+	if o.output == "json" {
+		return writer.WriteJSON(o.Streams.Out, allHeaders, matrix)
+	}
+
 	buf := bytes.NewBuffer(nil)
-	writer.WriteResults(buf, append([]string{"CONTEXT"}, headers...), matrix, noHeader)
+	writer.WriteResults(buf, allHeaders, matrix, noHeader)
 	fmt.Fprintf(o.Streams.Out, "%s", buf.String())
 
 	return nil

@@ -47,6 +47,7 @@ func newStatefulSetsCommand(_ cmdutil.Factory, options IssuesOptions) *cobra.Com
 	}
 
 	o.ResourceBuilderFlags.AddFlags(cmd.Flags())
+	cmd.Flags().StringVarP(&o.output, "output", "o", "", "Output format. One of: json.")
 
 	return cmd
 }

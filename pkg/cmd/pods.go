@@ -49,6 +49,7 @@ func newPodsCommand(_ cmdutil.Factory, options IssuesOptions) *cobra.Command {
 	}
 
 	o.ResourceBuilderFlags.AddFlags(cmd.Flags())
+	cmd.Flags().StringVarP(&o.output, "output", "o", "", "Output format. One of: json.")
 
 	defaults := pods.DefaultOptions()
 	cmd.Flags().IntVar(&o.restartThreshold, "restart-threshold", defaults.RestartThreshold, "Minimum restart count before a Ready Pod with a recent crash is reported. 0 only reports Pods which are not Ready, 1 reports any recent crash.")
