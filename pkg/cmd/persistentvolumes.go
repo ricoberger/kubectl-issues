@@ -1,12 +1,11 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
+	"github.com/ricoberger/kubectl-issues/pkg/client"
 	"github.com/ricoberger/kubectl-issues/pkg/cmd/utils"
-	"github.com/ricoberger/kubectl-issues/pkg/writer"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +24,7 @@ func newPersistentVolumesOptions(options IssuesOptions) *PersistentVolumesOption
 	}
 }
 
-func newPersistentVolumesCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
+func newPersistentVolumesCommand(_ cmdutil.Factory, options IssuesOptions) *cobra.Command {
 	o := newPersistentVolumesOptions(options)
 
 	cmd := &cobra.Command{
@@ -34,13 +33,14 @@ func newPersistentVolumesCommand(factory cmdutil.Factory, options IssuesOptions)
 		Short:        "List issues with PersistentVolumes",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			if err := o.Complete(factory, c); err != nil {
+			if err := o.Complete(c); err != nil {
 				return err
 			}
 
 			ctx := context.Background()
 			noHeader := c.Flag("no-headers").Changed
-			if err := o.Run(ctx, noHeader); err != nil {
+			headers := []string{"NAME", "CAPACITY", "ACCESS MODES", "RECLAIM POLICY", "STATUS", "CLAIM", "STORAGECLASS", "REASON", "AGE"}
+			if err := o.RunAcrossContexts(ctx, noHeader, headers, o.rows); err != nil {
 				fmt.Fprintln(options.Streams.ErrOut, err.Error())
 				return nil
 			}
@@ -53,15 +53,10 @@ func newPersistentVolumesCommand(factory cmdutil.Factory, options IssuesOptions)
 	return cmd
 }
 
-func (o *PersistentVolumesOptions) Run(ctx context.Context, noHeader bool) error {
-	client, err := o.GetClient()
+func (o *PersistentVolumesOptions) rows(ctx context.Context, contextClient client.ContextClient) ([][]string, error) {
+	pvs, err := contextClient.Client.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return err
-	}
-
-	pvs, err := client.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var matrix [][]string
@@ -77,11 +72,5 @@ func (o *PersistentVolumesOptions) Run(ctx context.Context, noHeader bool) error
 		}
 	}
 
-	headers := []string{"NAME", "CAPACITY", "ACCESS MODES", "RECLAIM POLICY", "STATUS", "CLAIM", "STORAGECLASS", "REASON", "AGE"}
-
-	buf := bytes.NewBuffer(nil)
-	writer.WriteResults(buf, headers, matrix, noHeader)
-	fmt.Printf("%s", buf.String())
-
-	return nil
+	return matrix, nil
 }

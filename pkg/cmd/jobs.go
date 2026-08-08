@@ -1,12 +1,11 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
+	"github.com/ricoberger/kubectl-issues/pkg/client"
 	"github.com/ricoberger/kubectl-issues/pkg/cmd/utils"
-	"github.com/ricoberger/kubectl-issues/pkg/writer"
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +22,7 @@ func newJobsOptions(options IssuesOptions) *JobsOptions {
 	}
 }
 
-func newJobsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
+func newJobsCommand(_ cmdutil.Factory, options IssuesOptions) *cobra.Command {
 	o := newJobsOptions(options)
 
 	cmd := &cobra.Command{
@@ -32,13 +31,14 @@ func newJobsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 		Short:        "List issues with Jobs",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			if err := o.Complete(factory, c); err != nil {
+			if err := o.Complete(c); err != nil {
 				return err
 			}
 
 			ctx := context.Background()
 			noHeader := c.Flag("no-headers").Changed
-			if err := o.Run(ctx, noHeader); err != nil {
+			headers := []string{"NAMESPACE", "NAME", "REASON", "MESSAGE", "AGE"}
+			if err := o.RunAcrossContexts(ctx, noHeader, headers, o.rows); err != nil {
 				fmt.Fprintln(options.Streams.ErrOut, err.Error())
 				return nil
 			}
@@ -51,15 +51,10 @@ func newJobsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 	return cmd
 }
 
-func (o *JobsOptions) Run(ctx context.Context, noHeader bool) error {
-	client, err := o.GetClient()
+func (o *JobsOptions) rows(ctx context.Context, contextClient client.ContextClient) ([][]string, error) {
+	jobs, err := contextClient.Client.BatchV1().Jobs(contextClient.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return err
-	}
-
-	jobs, err := client.BatchV1().Jobs(o.namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var matrix [][]string
@@ -73,11 +68,5 @@ func (o *JobsOptions) Run(ctx context.Context, noHeader bool) error {
 		}
 	}
 
-	headers := []string{"NAMESPACE", "NAME", "REASON", "MESSAGE", "AGE"}
-
-	buf := bytes.NewBuffer(nil)
-	writer.WriteResults(buf, headers, matrix, noHeader)
-	fmt.Printf("%s", buf.String())
-
-	return nil
+	return matrix, nil
 }

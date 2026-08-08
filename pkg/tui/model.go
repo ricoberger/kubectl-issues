@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ricoberger/kubectl-issues/pkg/client"
 	"github.com/ricoberger/kubectl-issues/pkg/pods"
 
 	tea "charm.land/bubbletea/v2"
@@ -66,7 +67,7 @@ type podsMsg struct {
 }
 
 // fetchCmd fetches the unhealthy Pods from all contexts in parallel.
-func fetchCmd(clients []ContextClient, podsOptions pods.Options) tea.Cmd {
+func fetchCmd(clients []client.ContextClient, podsOptions pods.Options) tea.Cmd {
 	return func() tea.Msg {
 		var (
 			wg       sync.WaitGroup
@@ -75,29 +76,29 @@ func fetchCmd(clients []ContextClient, podsOptions pods.Options) tea.Cmd {
 			firstErr error
 		)
 
-		for _, client := range clients {
+		for _, contextClient := range clients {
 			wg.Add(1)
 
-			go func(client ContextClient) {
+			go func(contextClient client.ContextClient) {
 				defer wg.Done()
 
 				ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 				defer cancel()
 
-				result, err := pods.ListUnhealthy(ctx, client.Client, "", client.Name, podsOptions)
+				result, err := pods.ListUnhealthy(ctx, contextClient.Client, contextClient.Namespace, contextClient.Name, podsOptions)
 
 				mu.Lock()
 				defer mu.Unlock()
 
 				if err != nil {
 					if firstErr == nil {
-						firstErr = fmt.Errorf("%s: %w", client.Name, err)
+						firstErr = fmt.Errorf("%s: %w", contextClient.Name, err)
 					}
 					return
 				}
 
 				items = append(items, result...)
-			}(client)
+			}(contextClient)
 		}
 
 		wg.Wait()
@@ -120,7 +121,7 @@ type Model struct {
 	ScreenWidth  int
 	ScreenHeight int
 
-	Clients     []ContextClient
+	Clients     []client.ContextClient
 	PodsOptions pods.Options
 	Table       table.Model
 
@@ -129,7 +130,7 @@ type Model struct {
 	lastUpdated time.Time
 }
 
-func NewModel(clients []ContextClient, podsOptions pods.Options) tea.Model {
+func NewModel(clients []client.ContextClient, podsOptions pods.Options) tea.Model {
 	return &Model{
 		Clients:     clients,
 		PodsOptions: podsOptions,
