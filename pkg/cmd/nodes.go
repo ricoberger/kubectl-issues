@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
 
+	"github.com/ricoberger/kubectl-issues/pkg/client"
 	"github.com/ricoberger/kubectl-issues/pkg/cmd/utils"
-	"github.com/ricoberger/kubectl-issues/pkg/writer"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +24,7 @@ func newNodesOptions(options IssuesOptions) *NodesOptions {
 	}
 }
 
-func newNodesCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
+func newNodesCommand(_ cmdutil.Factory, options IssuesOptions) *cobra.Command {
 	o := newNodesOptions(options)
 
 	cmd := &cobra.Command{
@@ -34,13 +33,14 @@ func newNodesCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comm
 		Short:        "List issues with Nodes",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			if err := o.Complete(factory, c); err != nil {
+			if err := o.Complete(c); err != nil {
 				return err
 			}
 
 			ctx := context.Background()
 			noHeader := c.Flag("no-headers").Changed
-			if err := o.Run(ctx, noHeader); err != nil {
+			headers := []string{"NAME", "STATUS", "ROLES", "AGE", "VERSION"}
+			if err := o.RunAcrossContexts(ctx, noHeader, headers, o.rows); err != nil {
 				fmt.Fprintln(options.Streams.ErrOut, err.Error())
 				return nil
 			}
@@ -53,15 +53,10 @@ func newNodesCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comm
 	return cmd
 }
 
-func (o *NodesOptions) Run(ctx context.Context, noHeader bool) error {
-	client, err := o.GetClient()
+func (o *NodesOptions) rows(ctx context.Context, contextClient client.ContextClient) ([][]string, error) {
+	nodes, err := contextClient.Client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return err
-	}
-
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var matrix [][]string
@@ -73,13 +68,7 @@ func (o *NodesOptions) Run(ctx context.Context, noHeader bool) error {
 		}
 	}
 
-	headers := []string{"NAME", "STATUS", "ROLES", "AGE", "VERSION"}
-
-	buf := bytes.NewBuffer(nil)
-	writer.WriteResults(buf, headers, matrix, noHeader)
-	fmt.Printf("%s", buf.String())
-
-	return nil
+	return matrix, nil
 }
 
 func isNodeReady(conditions []corev1.NodeCondition) bool {

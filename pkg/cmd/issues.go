@@ -8,8 +8,11 @@ import (
 var cmdExample = `  # List issues with Pods
   kubectl issues pods
 
+  # List issues with Pods across multiple contexts
+  kubectl issues pods --all-namespaces --context staging --context production
+
   # Show all unhealthy Pods across multiple contexts in a TUI
-  kubectl issues tui --context staging --context production
+  kubectl issues tui --all-namespaces --context staging --context production
 `
 
 func NewIssuesCommand() *cobra.Command {
@@ -25,7 +28,12 @@ func NewIssuesCommand() *cobra.Command {
 	cmd.PersistentFlags().Bool("no-headers", false, "Don't print headers (default print headers).")
 
 	flags := cmd.PersistentFlags()
+
+	// The context flag of the config flags is replaced with our own repeatable
+	// flag, so that issues can be listed across multiple contexts at once.
+	o.ConfigFlags.Context = nil
 	o.ConfigFlags.AddFlags(flags)
+	flags.StringArray("context", nil, "The name of the kubeconfig context to use. Can be specified multiple times to list issues from multiple clusters.")
 
 	matchVersionFlags := cmdutil.NewMatchVersionFlags(o.ConfigFlags)
 	matchVersionFlags.AddFlags(flags)

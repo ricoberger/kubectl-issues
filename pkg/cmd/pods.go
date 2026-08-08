@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ricoberger/kubectl-issues/pkg/client"
 	"github.com/ricoberger/kubectl-issues/pkg/pods"
-	"github.com/ricoberger/kubectl-issues/pkg/writer"
 
 	"github.com/spf13/cobra"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -25,7 +24,7 @@ func newPodsOptions(options IssuesOptions) *PodsOptions {
 	}
 }
 
-func newPodsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Command {
+func newPodsCommand(_ cmdutil.Factory, options IssuesOptions) *cobra.Command {
 	o := newPodsOptions(options)
 
 	cmd := &cobra.Command{
@@ -34,13 +33,14 @@ func newPodsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 		Short:        "List issues with Pods",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			if err := o.Complete(factory, c); err != nil {
+			if err := o.Complete(c); err != nil {
 				return err
 			}
 
 			ctx := context.Background()
 			noHeader := c.Flag("no-headers").Changed
-			if err := o.Run(ctx, noHeader); err != nil {
+			headers := []string{"NAMESPACE", "NAME", "READY", "STATUS", "RESTARTS", "AGE"}
+			if err := o.RunAcrossContexts(ctx, noHeader, headers, o.rows); err != nil {
 				fmt.Fprintln(options.Streams.ErrOut, err.Error())
 				return nil
 			}
@@ -57,18 +57,13 @@ func newPodsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 	return cmd
 }
 
-func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
-	client, err := o.GetClient()
-	if err != nil {
-		return err
-	}
-
-	unhealthy, err := pods.ListUnhealthy(ctx, client, o.namespace, "", pods.Options{
+func (o *PodsOptions) rows(ctx context.Context, contextClient client.ContextClient) ([][]string, error) {
+	unhealthy, err := pods.ListUnhealthy(ctx, contextClient.Client, contextClient.Namespace, "", pods.Options{
 		RestartThreshold: o.restartThreshold,
 		RestartWindow:    o.restartWindow,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var matrix [][]string
@@ -76,11 +71,5 @@ func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
 		matrix = append(matrix, []string{pod.Namespace, pod.Name, pod.Ready, pod.Status, pod.Restarts, pod.Age})
 	}
 
-	headers := []string{"NAMESPACE", "NAME", "READY", "STATUS", "RESTARTS", "AGE"}
-
-	buf := bytes.NewBuffer(nil)
-	writer.WriteResults(buf, headers, matrix, noHeader)
-	fmt.Printf("%s", buf.String())
-
-	return nil
+	return matrix, nil
 }
