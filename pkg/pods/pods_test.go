@@ -304,3 +304,125 @@ func TestDescribePodReadyAndRestarts(t *testing.T) {
 		})
 	}
 }
+
+func TestHasRecentCrash(t *testing.T) {
+	recent := metav1.NewTime(time.Now().Add(-2 * time.Hour))
+	stale := metav1.NewTime(time.Now().Add(-48 * time.Hour))
+
+	crashedPod := func(restarts int32, exitCode int32, finishedAt metav1.Time) corev1.Pod {
+		return corev1.Pod{
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "app",
+						RestartCount: restarts,
+						LastTerminationState: corev1.ContainerState{
+							Terminated: &corev1.ContainerStateTerminated{ExitCode: exitCode, FinishedAt: finishedAt},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name string
+		pod  corev1.Pod
+		opts Options
+		want bool
+	}{
+		{
+			name: "restarts above threshold with recent crash",
+			pod:  crashedPod(3, 1, recent),
+			opts: DefaultOptions(),
+			want: true,
+		},
+		{
+			name: "single restart below threshold",
+			pod:  crashedPod(1, 1, recent),
+			opts: DefaultOptions(),
+			want: false,
+		},
+		{
+			name: "restarts above threshold but crash outside window",
+			pod:  crashedPod(5, 1, stale),
+			opts: DefaultOptions(),
+			want: false,
+		},
+		{
+			name: "restarts above threshold but clean exit",
+			pod:  crashedPod(5, 0, recent),
+			opts: DefaultOptions(),
+			want: false,
+		},
+		{
+			name: "threshold zero disables the check",
+			pod:  crashedPod(10, 1, recent),
+			opts: Options{RestartThreshold: 0, RestartWindow: 24 * time.Hour},
+			want: false,
+		},
+		{
+			name: "threshold one matches any recent crash",
+			pod:  crashedPod(1, 1, recent),
+			opts: Options{RestartThreshold: 1, RestartWindow: 24 * time.Hour},
+			want: true,
+		},
+		{
+			name: "custom window excludes older crash",
+			pod:  crashedPod(3, 1, recent),
+			opts: Options{RestartThreshold: 3, RestartWindow: time.Hour},
+			want: false,
+		},
+		{
+			name: "threshold not summed across containers",
+			pod: corev1.Pod{
+				Status: corev1.PodStatus{
+					ContainerStatuses: []corev1.ContainerStatus{
+						{
+							Name:         "app",
+							RestartCount: 2,
+							LastTerminationState: corev1.ContainerState{
+								Terminated: &corev1.ContainerStateTerminated{ExitCode: 1, FinishedAt: recent},
+							},
+						},
+						{
+							Name:         "sidecar",
+							RestartCount: 2,
+							LastTerminationState: corev1.ContainerState{
+								Terminated: &corev1.ContainerStateTerminated{ExitCode: 1, FinishedAt: recent},
+							},
+						},
+					},
+				},
+			},
+			opts: DefaultOptions(),
+			want: false,
+		},
+		{
+			name: "init container crash counts",
+			pod: corev1.Pod{
+				Status: corev1.PodStatus{
+					InitContainerStatuses: []corev1.ContainerStatus{
+						{
+							Name:         "init",
+							RestartCount: 3,
+							LastTerminationState: corev1.ContainerState{
+								Terminated: &corev1.ContainerStateTerminated{ExitCode: 1, FinishedAt: recent},
+							},
+						},
+					},
+				},
+			},
+			opts: DefaultOptions(),
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := hasRecentCrash(tt.pod, tt.opts); got != tt.want {
+				t.Errorf("hasRecentCrash() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

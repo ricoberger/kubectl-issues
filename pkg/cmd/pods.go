@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ricoberger/kubectl-issues/pkg/pods"
 	"github.com/ricoberger/kubectl-issues/pkg/writer"
@@ -14,6 +15,8 @@ import (
 
 type PodsOptions struct {
 	IssuesOptions
+	restartThreshold int
+	restartWindow    time.Duration
 }
 
 func newPodsOptions(options IssuesOptions) *PodsOptions {
@@ -47,6 +50,10 @@ func newPodsCommand(factory cmdutil.Factory, options IssuesOptions) *cobra.Comma
 
 	o.ResourceBuilderFlags.AddFlags(cmd.Flags())
 
+	defaults := pods.DefaultOptions()
+	cmd.Flags().IntVar(&o.restartThreshold, "restart-threshold", defaults.RestartThreshold, "Minimum restart count before a Ready Pod with a recent crash is reported. 0 only reports Pods which are not Ready, 1 reports any recent crash.")
+	cmd.Flags().DurationVar(&o.restartWindow, "restart-window", defaults.RestartWindow, "How recent the last crash of a container must be for a Ready Pod to be reported.")
+
 	return cmd
 }
 
@@ -56,7 +63,10 @@ func (o *PodsOptions) Run(ctx context.Context, noHeader bool) error {
 		return err
 	}
 
-	unhealthy, err := pods.ListUnhealthy(ctx, client, o.namespace, "")
+	unhealthy, err := pods.ListUnhealthy(ctx, client, o.namespace, "", pods.Options{
+		RestartThreshold: o.restartThreshold,
+		RestartWindow:    o.restartWindow,
+	})
 	if err != nil {
 		return err
 	}
